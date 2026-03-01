@@ -65,6 +65,8 @@ All commits follow Conventional Commits (`<type>(<scope>): <description>`). See 
 - All secrets and IDs are environment variables; never hardcoded (including Airtable base IDs, Slack channel IDs, tenant IDs)
 - Cron jobs and webhook handlers share the same tool definitions — the trigger mechanism does not affect the AI logic
 - Edge runtime for lightweight webhook validation; Node.js runtime for anything calling external APIs or needing Node built-ins
+- Airtable is the human-facing layer — it is where humans define tasks and review results, not a general-purpose database; job state should be written back to Airtable only as a final outcome, not used to track intermediate processing state
+- Intermediate job state is held in-process or passed between steps in a single invocation; a future iteration will introduce a proper database (e.g. Supabase) for durable job state — do not design around Airtable for this purpose
 
 ## Efficiency and Cost Reduction
 
