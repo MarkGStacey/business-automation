@@ -16,6 +16,7 @@ This is a Node.js business automation service deployed as serverless functions o
 4. **Airtable as data store** — Read from and write to Airtable bases as the primary data layer; Airtable tables act as both the input queue and the record of completed work
 5. **Slack messaging** — Send notifications and structured messages to Slack channels as an output of automation workflows
 6. **Office 365 email** — Read inbound emails from a business mailbox and send outbound emails via Microsoft Graph API using an Office 365 service account
+7. **Efficiency and cost control** — All code must be as efficient as possible; every interaction with an external service (Airtable, Slack, Graph API, Claude) must be designed to minimise API calls, token usage, and compute time
 
 ## Project Structure
 
@@ -64,3 +65,26 @@ All commits follow Conventional Commits (`<type>(<scope>): <description>`). See 
 - All secrets and IDs are environment variables; never hardcoded (including Airtable base IDs, Slack channel IDs, tenant IDs)
 - Cron jobs and webhook handlers share the same tool definitions — the trigger mechanism does not affect the AI logic
 - Edge runtime for lightweight webhook validation; Node.js runtime for anything calling external APIs or needing Node built-ins
+- Airtable is the human-facing layer — it is where humans define tasks and review results, not a general-purpose database; job state should be written back to Airtable only as a final outcome, not used to track intermediate processing state
+- Intermediate job state is held in-process or passed between steps in a single invocation; a future iteration will introduce a proper database (e.g. Supabase) for durable job state — do not design around Airtable for this purpose
+
+## Efficiency and Cost Reduction
+
+These rules apply to all code in this repository without exception.
+
+**AI / token usage**
+- Use the smallest Claude model that can reliably complete the task — only escalate to a larger model when output quality demonstrably requires it
+- Keep system prompts concise; every token in the prompt is paid for on every invocation
+- Pass only the data the model needs — never dump entire Airtable tables or email threads into context
+- Prefer `generateText` / `generateObject` over streaming variants in background/cron jobs where the client does not consume the stream
+
+**External API calls**
+- Batch reads and writes wherever the API supports it — prefer one Airtable `select` with a formula over multiple `find` calls
+- Filter at the source: use Airtable `filterByFormula`, Graph `$filter`, and Slack query params to retrieve only the records needed — never fetch-then-filter in code
+- Mark emails as read and move them in the same Graph request cycle as processing — avoid re-fetching already-handled records
+- Cache immutable or slow-changing data (e.g. Airtable field metadata, Slack channel IDs) in module-level constants rather than fetching per invocation
+
+**Serverless / compute**
+- Keep cold-start surface small — import only what is used in each function file
+- Do not perform redundant work inside a handler that could be done at build time or cached at module load
+- Avoid polling loops; prefer event-driven triggers (webhooks, cron) over repeated scheduled checks
