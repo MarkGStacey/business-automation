@@ -4,38 +4,45 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Purpose
 
-This is a dotfiles/conventions repository — there is no application to build, no tests to run, and no dependencies to install. It contains shared naming standards and workflow rules referenced across three projects:
+This is a Node.js business automation service deployed as serverless functions on Vercel. It uses the Vercel AI SDK to power AI-driven automation workflows.
 
-| Project | Stack |
-|---------|-------|
-| **OrcaFit** | Vue, Astro, Markdown |
-| **OpenTrail** | Quasar, Supabase, PowerSync, FastAPI, FastMCP, OpenStreetMap |
-| **Family Budget** | Quasar, Supabase, PowerSync, FastAPI, FastMCP, UK Open Banking |
+**Stack:** Node.js, TypeScript, Vercel Serverless Functions, Vercel AI SDK, Supabase
+
+## Project Structure
+
+```
+/api/               Vercel serverless function handlers (one file = one route)
+/lib/               Shared modules — clients, utilities, business logic
+  /lib/ai.ts        AI model provider configuration
+  /lib/db.ts        Supabase client
+  /lib/tools/       AI tool definitions (one file per tool or domain)
+/types/             Shared TypeScript types and Zod schemas
+/middleware.ts      Vercel edge middleware (auth, rate limiting, logging)
+vercel.json         Vercel project and routing configuration
+```
 
 ## Rules Directory
 
-All conventions live in `.claude/rules/`. Naming standard files cover only what things are called and how they are cased — not architecture or structure. The workflow file covers how Claude should approach and execute tasks.
+All conventions live in `.claude/rules/`.
 
 | File | Governs |
 |------|---------|
 | `.claude/rules/workflow.md` | Planning before execution, resuming interrupted tasks, todo list discipline |
 | `.claude/rules/git.md` | Branch names, Conventional Commits format, PR/MR process, tags |
-| `.claude/rules/vue.md` | Component prefixes (`Base`, `The`), composables (`useXxx`), props, events, Pinia stores |
-| `.claude/rules/astro.md` | `.astro` components, pages, layouts, content collections, frontmatter fields |
-| `.claude/rules/quasar.md` | Pages (`XxxPage`), layouts (`XxxLayout`), boot files, Capacitor conventions |
-| `.claude/rules/supabase.md` | Tables (snake_case plural), columns, FK patterns, RLS policy names, edge functions |
-| `.claude/rules/powersync.md` | Schema variables, YAML bucket definition names, TypeScript integration |
-| `.claude/rules/fastapi.md` | Route handlers (`get_`, `list_`, `create_`), Pydantic model suffixes, dependencies |
-| `.claude/rules/fastmcp.md` | Tools (snake_case verb-first), resource URI schemes, prompt names |
+| `.claude/rules/typescript.md` | Types, interfaces, Zod schemas, module structure, naming |
+| `.claude/rules/vercel.md` | Function handlers, runtime selection, middleware, environment variables, `vercel.json` |
+| `.claude/rules/ai-sdk.md` | Vercel AI SDK — models, streaming, tool calling, structured output |
+| `.claude/rules/supabase.md` | Tables, columns, FK patterns, RLS policy names, edge functions |
+| `.claude/rules/fastmcp.md` | MCP server tools, resources, prompts (Node.js/TypeScript) |
 
 ## Git Conventions
 
-All commits in this repo follow Conventional Commits (`<type>(<scope>): <description>`). See `rules/git.md` for the full specification — that file is the authoritative source and applies to all projects in this ecosystem.
+All commits follow Conventional Commits (`<type>(<scope>): <description>`). See `.claude/rules/git.md` for the full specification.
 
-## Modifying Rules
+## Key Principles
 
-- Edit the relevant file in `rules/` directly
-- Rules files are markdown — keep them concise and example-driven
-- Naming rules cover naming only — do not add architectural guidance to them
-- Workflow rules (`workflow.md`) cover how Claude executes tasks — keep them process-focused, not technology-specific
-- When a technology spans multiple projects (e.g. Supabase, FastAPI), the rule in this repo is the single source of truth
+- Every `/api/` handler is a pure function — no global mutable state
+- AI tool definitions live in `/lib/tools/` and are imported into handlers — never defined inline
+- All secrets are environment variables; never hardcoded
+- Prefer streaming responses (`streamText`, `streamObject`) for AI endpoints
+- Edge runtime for latency-sensitive routes; Node.js runtime for anything requiring Node APIs

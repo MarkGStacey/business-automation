@@ -1,63 +1,81 @@
-# FastMCP Naming Standards
+# FastMCP Naming Standards (Node.js / TypeScript)
 
 ## Server
 
-- Server instance variable: **snake_case** matching the domain — `trail_server`, `budget_server`
-- Server name string (passed to `FastMCP()`): Title Case or kebab-case human-readable — `"Trail API"`, `"Budget API"`
-- Server file: `server.py` or `<domain>_server.py` — `trail_server.py`, `budget_server.py`
+- Server instance variable: **camelCase** matching the domain — `automationServer`, `documentServer`
+- Server name string (passed to `new FastMCP()`): human-readable Title Case — `"Business Automation"`, `"Document Processing"`
+- Server file: `server.ts` or `<domain>-server.ts` at the project root or in `/lib/mcp/`
+
+```ts
+import { FastMCP } from 'fastmcp';
+export const automationServer = new FastMCP('Business Automation');
+```
 
 ## Tools
 
-- Tool function names: **snake_case**, verb-first describing the action — `search_trails()`, `get_trail_detail()`, `list_nearby_pois()`, `get_account_balance()`, `categorise_transaction()`
-- Tool names registered with the MCP protocol: snake_case matching the function name — `search_trails`, `get_account_balance`
-- Tool descriptions: plain English sentence describing what the tool does and what it returns
-- Parameter names: snake_case — `trail_id`, `latitude`, `longitude`, `account_id`, `date_from`
+- Tool function names: **camelCase**, verb-first describing the action — `searchDocuments`, `summariseText`, `sendNotification`, `lookupCustomer`
+- Tool names registered with MCP protocol: camelCase matching the function name — `searchDocuments`, `lookupCustomer`
+- Tool descriptions: plain English sentence; include what it returns
+- Parameter names: camelCase — `documentId`, `queryText`, `maxResults`
 
-```python
-# Correct
-@mcp.tool()
-def search_trails(query: str, latitude: float, longitude: float, radius_km: float = 10.0) -> list[Trail]:
-    """Search for trails near a given location. Returns a list of matching trails with summary data."""
-    ...
+```ts
+// Correct
+automationServer.addTool({
+  name: 'searchDocuments',
+  description: 'Search documents by query string. Returns a list of matching document excerpts with metadata.',
+  parameters: z.object({
+    query: z.string().describe('The search query'),
+    limit: z.number().int().default(5).describe('Maximum results to return'),
+  }),
+  execute: async ({ query, limit }) => { ... },
+});
 ```
 
 ## Resources
 
-- Resource URI scheme: `<domain>://<path>` — `trail://segments/{segment_id}`, `budget://accounts/{account_id}`
-- Resource name string: kebab-case, descriptive — `"trail-detail"`, `"account-summary"`, `"transaction-history"`
-- Resource function names: snake_case, noun-first — `trail_detail()`, `account_summary()`, `transaction_history()`
-- URI template parameters: snake_case — `{trail_id}`, `{account_id}`, `{transaction_id}`
+- Resource URI scheme: `<domain>://<path>` — `document://items/{documentId}`, `automation://runs/{runId}`
+- Resource name string: kebab-case — `"document-detail"`, `"automation-run-status"`
+- Resource handler function names: camelCase, noun-first — `documentDetail`, `automationRunStatus`
+- URI template parameters: camelCase — `{documentId}`, `{runId}`
 
-```python
-# Correct
-@mcp.resource("trail://segments/{segment_id}")
-def trail_segment(segment_id: str) -> TrailSegment:
-    """Returns full detail for a single trail segment."""
-    ...
+```ts
+automationServer.addResource({
+  uri: 'document://items/{documentId}',
+  name: 'document-detail',
+  load: async ({ documentId }) => { ... },
+});
 ```
 
 ## Prompts
 
-- Prompt function names: snake_case, describing the use case — `trail_search_prompt()`, `budget_analysis_prompt()`, `spending_summary_prompt()`
-- Prompt name string: kebab-case — `"trail-search"`, `"budget-analysis"`
+- Prompt handler function names: camelCase, use-case descriptive — `documentSearchPrompt`, `summaryRequestPrompt`
+- Prompt name string: kebab-case — `"document-search"`, `"summary-request"`
 
-```python
-# Correct
-@mcp.prompt("trail-search")
-def trail_search_prompt(location: str) -> str:
-    ...
+```ts
+automationServer.addPrompt({
+  name: 'document-search',
+  load: async ({ topic }) => `Search for documents about: ${topic}`,
+});
 ```
 
-## Pydantic Models (Input/Output Schemas)
+## Zod Schemas (Tool Parameters)
 
-- Follow FastAPI conventions: PascalCase with descriptive suffix — `TrailSearchResult`, `AccountSummary`, `TransactionList`
-- Kept in `schemas/` alongside the server file or shared with the FastAPI layer
+- Follow TypeScript conventions: PascalCase with `Schema` suffix — `SearchDocumentsSchema`, `LookupCustomerSchema`
+- Defined in `/types/tools.ts` or co-located in `/lib/mcp/tools/` — never inline in `addTool` calls
 
 ## Module and File Layout
 
-- snake_case filenames throughout: `tools/trail_tools.py`, `tools/budget_tools.py`, `resources/trail_resources.py`
-- Shared types: `schemas/trail.py`, `schemas/account.py`
+```
+/lib/mcp/
+  server.ts                  # FastMCP server instantiation and startup
+  tools/
+    search-documents.ts      # searchDocuments tool
+    send-notification.ts     # sendNotification tool
+  resources/
+    document-detail.ts       # document://items/{documentId}
+```
 
 ## Environment Variables
 
-- SCREAMING_SNAKE_CASE: `MCP_SERVER_HOST`, `MCP_SERVER_PORT`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`
+- SCREAMING_SNAKE_CASE: `MCP_SERVER_PORT`, `MCP_SERVER_HOST`
+- Shared with the main application: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `OPENAI_API_KEY`
